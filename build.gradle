@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+}
+
+group 'tools4free'
+version '0.1'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'tools4free.ssm.SsdSlowMark'
+        attributes 'Version': project.version
+    }
+}
+
+task copyToReleaseWin(type: Copy) {
+    from file("$buildDir/libs/")
+    include "SsdSlowMark*.jar"
+    into file("$projectDir/release/win/")
+    rename '(.*)', 'SsdSlowMark.jar'
+}
+
+task copyToReleaseLinux(type: Copy) {
+    from file("$buildDir/libs/")
+    include "SsdSlowMark*.jar"
+    into file("$projectDir/release/linux/")
+    rename '(.*)', 'SsdSlowMark.jar'
+}
+
+jar.finalizedBy copyToReleaseWin
+jar.finalizedBy copyToReleaseLinux

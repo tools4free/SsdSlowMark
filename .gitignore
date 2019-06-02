@@ -1,0 +1,9 @@
+.idea
+.gradle
+_*
+logs
+build
+target
+out
+*.iml
+wmic/*.txt
