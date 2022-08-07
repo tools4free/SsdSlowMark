@@ -2,7 +2,7 @@
 SSD SlowMark
 ============
 
-SsdSlowMark is yet another tool for measuring of SSL speed.
+SsdSlowMark is yet another tool for measuring of SSD speed.
 Please find more details at 
     https://tools4free.github.io/ssd-slow-mark
 

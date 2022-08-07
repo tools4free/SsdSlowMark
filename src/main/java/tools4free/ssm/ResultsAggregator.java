@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static tools4free.ssm.ResultsWriter.*;
-import static tools4free.ssm.SsdSlowMark.echo;
+import static tools4free.ssm.SsdSlowMark.echoLn;
 
 public class ResultsAggregator {
     Config config;
@@ -30,7 +30,7 @@ public class ResultsAggregator {
         File out = new File(config.out);
         Map<String,StringBuilder> averages = new HashMap<>();
 
-        echo("Running aggregation in " + in);
+        echoLn("Running aggregation in " + in);
         File[] files = in.listFiles();
         if( files == null )
             return;
@@ -67,7 +67,7 @@ public class ResultsAggregator {
                 Files.write(outFile, outText);
             }
             catch( IOException ex ) {
-                echo("Failed to write %s: %s", outFile, ex.getMessage());
+                echoLn("Failed to write %s: %s", outFile, ex.getMessage());
             }
         }
     }
@@ -84,7 +84,7 @@ public class ResultsAggregator {
             avg.append(lines.get(1)).append('\n');
         }
         catch( IOException e ) {
-            echo("Failed to read %s: %s", file, e.getMessage());
+            echoLn("Failed to read %s: %s", file, e.getMessage());
         }
     }
 
@@ -108,7 +108,7 @@ public class ResultsAggregator {
             ResultsWriter.buildAverage(diskModel, avgFile, chunks);
         }
         catch( Exception e ) {
-            echo("Failed to read %s: %s", file, e.getMessage());
+            echoLn("Failed to read %s: %s", file, e.getMessage());
         }
     }
 
@@ -150,7 +150,7 @@ public class ResultsAggregator {
                         averages.put(testKind, ta);
                     }
                     catch( Exception e ) {
-                        echo("Failed to read %s: %s", file, e.getMessage());
+                        echoLn("Failed to read %s: %s", file, e.getMessage());
                     }
                     break;
                 }

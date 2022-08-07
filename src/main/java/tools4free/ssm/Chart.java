@@ -89,10 +89,7 @@ public class Chart {
 
     boolean generateFor(List<Chunk> chunks, Kind kind, Color lineColor, boolean withMinMaxPctls) {
         int cChunks = chunks.size();
-        if( cChunks < 2 )
-            return false;
-
-        dataSizeGb = chunks.get(1).offsetMb * cChunks / 1024.0f;
+        dataSizeGb = (chunks.size() < 2) ? 0 : chunks.get(1).offsetMb * cChunks / 1024.0f;
         pctls = buildPctls(chunks);
 
         if( !prepared )
@@ -217,7 +214,7 @@ public class Chart {
             pctlClr = pctlClr.brighter();
         }
 
-        if( withMinMaxPctls ) {
+        if( withMinMaxPctls && (pctls.min != null) && (pctls.max != null) ) {
             pctrlRenderer.accept(pctls.max.value, new Color(0, 196, 0));
             pctrlRenderer.accept(pctls.min.value, new Color(196, 0, 0));
         }

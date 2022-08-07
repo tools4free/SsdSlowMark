@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static tools4free.ssm.SsdSlowMark.echo;
+import static tools4free.ssm.SsdSlowMark.echoLn;
 
 public class Shell {
 
@@ -26,10 +26,10 @@ public class Shell {
         try {
             proc.waitFor();
             if( proc.exitValue() != 0 ) {
-                echo(asList(command).toString());
+                echoLn(asList(command).toString());
                 BufferedReader errIn = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
                 while( (line = errIn.readLine()) != null ) {
-                    echo(line);
+                    echoLn(line);
                 }
 
                 return Collections.emptyList();

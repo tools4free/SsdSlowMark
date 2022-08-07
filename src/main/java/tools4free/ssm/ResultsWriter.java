@@ -101,7 +101,7 @@ public class ResultsWriter {
             }
 
             cChunks = chunks.size();
-            echo("CSV report: " + file.getAbsolutePath());
+            echoLn("CSV report: " + file.getAbsolutePath());
         }
         catch( Exception e ) {
             System.err.println("Failed to write to " + file);
@@ -123,7 +123,7 @@ public class ResultsWriter {
         File chartFile = new File(rptDir, baseFileName + "_Chart.png");
         try {
             ImageIO.write(chart.img, "png", chartFile);
-            echo("CSV report: " + chartFile.getAbsolutePath());
+            echoLn("CSV report: " + chartFile.getAbsolutePath());
             // Desktop.getDesktop().open(chartFile);
         }
         catch( IOException e ) {
@@ -135,6 +135,10 @@ public class ResultsWriter {
     }
 
     public void writeSummary(String versionInfo, File rptDir, TestCase readTest, TestCase writeTest) {
+        // aborted via CTRL+C
+        if( rptDir == null )
+            return;
+
         Map<String,TestAverages> avrgs = ResultsAggregator.loadAverages(rptDir);
         Chart chart = new Chart(config);
 
@@ -154,7 +158,7 @@ public class ResultsWriter {
 
         for( Map.Entry<String, TestAverages> entry : avrgs.entrySet() ) {
             TestAverages ta = entry.getValue();
-            Color lineColor = ta.testKind.toLowerCase().contains("write") ? Color.RED : Color.green.darker();
+            Color lineColor;
 
             diskModel = ta.diskModel;
             if( ta.testKind.toLowerCase().contains("write") ) {
@@ -181,7 +185,7 @@ public class ResultsWriter {
             // Save as PNG
             try {
                 ImageIO.write(chart.img, "png", chartFile);
-                echo("ReadWrite Averages: " + chartFile.getAbsolutePath());
+                echoLn("ReadWrite Averages: " + chartFile.getAbsolutePath());
                 // Desktop.getDesktop().open(chartFile);
             }
             catch( IOException e ) {
@@ -220,7 +224,7 @@ public class ResultsWriter {
         File summaryFile = new File(rptDir, diskModel.replace(' ', '_') + "_Summary.html");
         try {
             Files.write(summaryFile.toPath(), html.getBytes(UTF_8));
-            echo("HTML report: " + summaryFile.getAbsolutePath());
+            echoLn("HTML report: " + summaryFile.getAbsolutePath());
             Desktop.getDesktop().open(summaryFile);
         }
         catch( IOException e ) {
@@ -272,10 +276,10 @@ public class ResultsWriter {
                 wr.write(captions.toString());
                 wr.write(values.toString());
             }
-            echo("CSV report: " + fileAvg.getAbsolutePath());
+            echoLn("CSV report: " + fileAvg.getAbsolutePath());
 
             Pctls pctls = buildPctls(chunks);
-            echo(pctls.toString());
+            echoLn(pctls.toString());
         }
         catch( Exception e ) {
             System.err.println("Failed to write to " + fileAvg);
@@ -301,6 +305,7 @@ public class ResultsWriter {
         Pctl max;
         Pctl min;
         float allMin;
+        float allAvg;
         float allMax;
 
         @Override
@@ -309,6 +314,7 @@ public class ResultsWriter {
             avg.sort(Comparator.comparing((Pctl pctl) -> pctl.value).reversed());
 
             String str =
+                    "      avg: " + String.format(US, "%.1f MB/s", allAvg) + '\n' +
                     "  avg.max: " + avg.get(0) + '\n' +
                     "      mid: " + avg.get(1) + '\n' +
                     "      min: " + avg.get(2) + '\n' +
@@ -334,17 +340,19 @@ public class ResultsWriter {
         int[] pctlAvg = new int[101];
         int[] pctlMax = new int[101];
         int[] pctlMin = new int[101];
-        float allMin = Float.MAX_VALUE, allMax = 0;
+        float allMin = Float.MAX_VALUE, allMax = 0, allAvg = 0;
 
-        for( int x = 0, i = 0; i < chunks.size(); x++, i++ ) {
+        for( int x = 0, i = 0; i < cChunks; x++, i++ ) {
             Chunk c = chunks.get(i);
             allMin = Math.min(allMin, c.min);
             allMax = Math.max(allMax, c.max);
+            allAvg += c.avg;
         }
+        allAvg = allAvg / cChunks;
 
         float minMaxRange = allMax - allMin;
         int maxPctl = 5;
-        for( int x = 0, i = 0; i < chunks.size(); x++, i++ ) {
+        for( int x = 0, i = 0; i < cChunks; x++, i++ ) {
             Chunk c = chunks.get(i);
 
             addPctl(pctlAvg, maxPctl, (int)(100.0 * (c.avg - allMin) / minMaxRange));
@@ -362,6 +370,7 @@ public class ResultsWriter {
         pctls.min = makePctl(sizeGb, chunks, pctlMin, allMin, minMaxRange, maxPctl);
 
         pctls.allMin = allMin;
+        pctls.allAvg = allAvg;
         pctls.allMax = allMax;
 
         return pctls;

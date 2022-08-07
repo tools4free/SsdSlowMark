@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.Formatter;
-import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
@@ -25,6 +24,7 @@ public class SsdSlowMark {
     private static TestWriter writer;
     private static TestReader reader;
     private static ResultsWriter output;
+    private static boolean shutdownStarted;
 
     static SysInfo si;
     static String ssmVersion;
@@ -34,11 +34,11 @@ public class SsdSlowMark {
     private static boolean resultsWritten;
     private static boolean statsWriting;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         si = new SysInfo();
         versionInfo = versionInfo();
-        echo(versionInfo);
-        echo("");
+        echoLn(versionInfo);
+        echoLn("");
 
         config = new Config().fromArgs(args);
         switch( config.test ) {
@@ -48,14 +48,15 @@ public class SsdSlowMark {
         }
 
         output = new ResultsWriter(config);
+        System.out.println("Press <ENTER> to abort and generate report ...");
+        System.out.println("");
 
-        if( config.test.contains("w") )
+        if( !shutdownStarted && config.test.contains("w") )
             (writer = new TestWriter(config)).start();
 
-        if( config.test.contains("r") ) {
+        if( !shutdownStarted && config.test.contains("r") ) {
             (reader = new TestReader(config, writer)).start();
         }
-
 
         new Thread(SsdSlowMark::progressMonitor).start();
 
@@ -63,28 +64,41 @@ public class SsdSlowMark {
         shutdownHandler.setName("Shutdown handler");
         Runtime.getRuntime().addShutdownHook(shutdownHandler);
 
-        try { Thread.sleep(100); } catch( InterruptedException e ) { e.printStackTrace(); }
-
-        System.out.println("Press <ENTER> to abort and generate report ...");
-        System.out.println("");
-
+        Thread.sleep(100);
         new BufferedReader(new InputStreamReader(System.in)).readLine();
 
-        if( writer != null )
-            writer.stop = true;
-        if( reader != null )
-            reader.stop = true;
-
-        waitFinished();
-        writeResults();
+        onShutdown();
     }
 
+    private static void stopWorkers() {
+        if( reader != null )
+            reader.stop = true;
+        if( writer != null )
+            writer.stop = true;
+    }
+
+    private static final StringBuilder echoBuf = new StringBuilder();
+    private static final Formatter echoFmt = new Formatter(echoBuf, US);
+
     public static void echo(String message) {
+        System.out.print(message);
+    }
+
+    public static void echoLn(String message) {
         System.out.println(message);
     }
 
     public static void echo(String format, Object... args) {
-        echo(new Formatter(US).format(format, args).toString());
+        synchronized( echoBuf ) {
+            echoBuf.setLength(0);
+            echoFmt.format(format, args);
+            echo(echoBuf.toString());
+        }
+    }
+
+    public static void echoLn(String format, Object... args) {
+        echo(format, args);
+        echoLn("");
     }
 
     static String versionInfo() {
@@ -156,7 +170,13 @@ public class SsdSlowMark {
         return true;
     }
 
-    private static void onShutdown() {
+    private static synchronized void onShutdown() {
+        if( shutdownStarted )
+            return;
+
+        shutdownStarted = true;
+        stopWorkers();
+        waitFinished();
         writeResults();
     }
 

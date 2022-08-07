@@ -11,6 +11,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static tools4free.ssm.SsdSlowMark.*;
 
 public class TestReader extends TestCase {
@@ -26,17 +28,19 @@ public class TestReader extends TestCase {
 
     @Override
     public void run() {
-        if( !doWaitFor() )
+        if( !doWaitFor() ) {
+            finished = true;
             return;
+        }
 
         int blockSize = config.bs * KB;
         float blockSizeMb = config.bs / (float)KB;
         byte[] data = new byte[blockSize];
 
-        echo("Files reader:");
-        echo("  Root dir: %s", root.getAbsolutePath());
-        echo("  Disk model: %s", diskModel);
-        echo("--------------------------------------");
+        echoLn("Files reader:");
+        echoLn("  Root dir: %s", root.getAbsolutePath());
+        echoLn("  Disk model: %s", diskModel);
+        echoLn("--------------------------------------");
 
         allBlocksTmp.add(blocksTmp);
         startTime = System.currentTimeMillis();
@@ -60,10 +64,16 @@ public class TestReader extends TestCase {
 
                     long fileStarted = System.nanoTime();
                     long fileMB = 0;
+                    File file = path.toFile();
+                    float perfMin = Float.MAX_VALUE, perfMax = Float.MIN_VALUE;
+                    long echoAfter = System.currentTimeMillis() + 100;
 
-                    try( FileInputStream fis = new FileInputStream(path.toFile()) ) {
+                    try( FileInputStream fis = new FileInputStream(file) ) {
                         long pos = 0;
-                        while( pos + data.length <= fileSize ) {
+                        for( long n = 1; pos + data.length <= fileSize; n++ ) {
+                            if( stop )
+                                return FileVisitResult.TERMINATE;
+
                             long started = System.nanoTime();
                             {
                                 pos += fis.read(data);
@@ -78,21 +88,25 @@ public class TestReader extends TestCase {
                             }
 
                             float sec = (finished - started) / NANO_SEC;
-                            float perfMb = blockSizeMb / sec;
+                            float perfBlock = blockSizeMb / sec;
+                            long now = System.currentTimeMillis();
 
-                            blocksTmp[cBlocksTmp++] = perfMb;
+                            blocksTmp[cBlocksTmp++] = perfBlock;
                             cAllBlocksTmp++;
+                            perfMin = min(perfMin, perfBlock);
+                            perfMax = max(perfMax, perfBlock);
+                            if( now > echoAfter ) {
+                                echoAfter = now + 100;
+                                printPerf("Read", file, fileStarted, fileMB, perfMin, perfMax, n, pos / (double)fileSize);
+                            }
                         }
                     }
                     catch( Exception e ) {
                         return FileVisitResult.CONTINUE;
                     }
 
-                    long fileFinished = System.nanoTime();
-                    float fileSec = (fileFinished - fileStarted) / NANO_SEC;
-                    float filePerfMb = fileMB / fileSec / MB;
-
-                    echo("Read: %s = %.1f MB/s", path.toAbsolutePath(), filePerfMb);
+                    printPerf("Read", file, fileStarted, fileMB, perfMin, perfMax);
+                    echoLn("                       ");
 
                     return FileVisitResult.CONTINUE;
                 }
@@ -123,10 +137,9 @@ public class TestReader extends TestCase {
             pos += blocki.length;
         }
 
-
-        SsdSlowMark.echo("Read test complete");
-        SsdSlowMark.echo("");
-        SsdSlowMark.echo("");
+        echoLn("Read test complete");
+        echoLn("");
+        echoLn("");
 
         finished = true;
     }

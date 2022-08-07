@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 
 jar {
@@ -22,19 +22,19 @@ jar {
     }
 }
 
-task copyToReleaseWin(type: Copy) {
+task _copyToReleaseWin_(type: Copy) {
     from file("$buildDir/libs/")
     include "SsdSlowMark*.jar"
     into file("$projectDir/release/win/")
     rename '(.*)', 'SsdSlowMark.jar'
 }
 
-task copyToReleaseLinux(type: Copy) {
+task _copyToReleaseLinux_(type: Copy) {
     from file("$buildDir/libs/")
     include "SsdSlowMark*.jar"
     into file("$projectDir/release/linux/")
     rename '(.*)', 'SsdSlowMark.jar'
 }
 
-jar.finalizedBy copyToReleaseWin
-jar.finalizedBy copyToReleaseLinux
+jar.finalizedBy _copyToReleaseWin_
+jar.finalizedBy _copyToReleaseLinux_

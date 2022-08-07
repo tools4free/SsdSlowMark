@@ -2,12 +2,15 @@ package tools4free.ssm;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.file.FileVisitResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Locale.US;
-import static tools4free.ssm.SsdSlowMark.echo;
+import static tools4free.ssm.SsdSlowMark.echoLn;
 
 public class TestWriter extends TestCase {
     List<File> createdFiles = new ArrayList<>(500);
@@ -44,13 +47,13 @@ public class TestWriter extends TestCase {
 
         File file = null;
 
-        echo("Files writer:");
-        echo("  File count: %s", config.fc);
-        echo("  File size: %s MB", config.fs);
-        echo("  Block size: %.1f MB", config.bs / 1024.0);
-        echo("  Root dir: %s", root.getAbsolutePath());
-        echo("  Disk model: %s", diskModel);
-        echo("--------------------------------------");
+        echoLn("Files writer:");
+        echoLn("  File count: %s", config.fc);
+        echoLn("  File size: %s MB", config.fs);
+        echoLn("  Block size: %.1f MB", config.bs / 1024.0);
+        echoLn("  Root dir: %s", root.getAbsolutePath());
+        echoLn("  Disk model: %s", diskModel);
+        echoLn("--------------------------------------");
 
         startTime = System.currentTimeMillis();
         try {
@@ -60,9 +63,11 @@ public class TestWriter extends TestCase {
                 long fileStarted = System.nanoTime();
                 long fileMB = 0;
                 long freeSpace = root.getFreeSpace();
+                float perfMin = Float.MAX_VALUE, perfMax = Float.MIN_VALUE;
+                long echoAfter = System.currentTimeMillis() + 100;
 
                 if( freeSpace - fileSizeLim < SsdSlowMark.GB ) {
-                    echo("  Abort, free space: %.1f", freeSpace / (float)SsdSlowMark.GB);
+                    echoLn("  Abort, free space: %.1f", freeSpace / (float)SsdSlowMark.GB);
                     break;
                 }
 
@@ -70,7 +75,7 @@ public class TestWriter extends TestCase {
                 try( FileOutputStream fos = new FileOutputStream(file) ) {
                     createdFiles.add(file);
 
-                    for( long fs = 0; !stop && fs < fileSizeLim; fs += data.length ) {
+                    for( long fs = 0, n = 1; !stop && fs < fileSizeLim; fs += data.length, n++ ) {
                         long started = System.nanoTime();
                         {
                             fos.write(data);
@@ -80,18 +85,22 @@ public class TestWriter extends TestCase {
                         long finished = System.nanoTime();
 
                         float sec = (finished - started) / SsdSlowMark.NANO_SEC;
-                        float perfMb = blockSizeMb / sec;
+                        float perfBlock = blockSizeMb / sec;
+                        long now = System.currentTimeMillis();
 
-                        blocks[cBlocks++] = perfMb;
+                        perfMin = min(perfMin, perfBlock);
+                        perfMax = max(perfMax, perfBlock);
+                        blocks[cBlocks++] = perfBlock;
                         fileMB += data.length;
+                        if( now > echoAfter ) {
+                            echoAfter = now + 100;
+                            printPerf("Write", file, fileStarted, fileMB, perfMin, perfMax, n, fs / (double)fileSizeLim);
+                        }
                     }
                 }
 
-                long fileFinished = System.nanoTime();
-                float fileSec = (fileFinished - fileStarted) / SsdSlowMark.NANO_SEC;
-                float filePerfMb = fileMB / fileSec / SsdSlowMark.MB;
-
-                echo("Write: %s = %.1f MB/s", file, filePerfMb);
+                printPerf("Write", file, fileStarted, fileMB, perfMin, perfMax);
+                echoLn("                       ");
             }
         }
         catch( Exception e ) {
@@ -102,9 +111,9 @@ public class TestWriter extends TestCase {
         stopTime = System.currentTimeMillis();
         elapsedMs = stopTime - startTime;
 
-        echo("Write test complete");
-        echo("");
-        echo("");
+        echoLn("Write test complete");
+        echoLn("");
+        echoLn("");
 
         finished = true;
     }

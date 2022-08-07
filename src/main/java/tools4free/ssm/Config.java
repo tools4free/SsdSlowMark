@@ -2,12 +2,11 @@ package tools4free.ssm;
 
 class Config {
     String test  = "rw";        // r | w | rw
-    int bs       = 4 * 1024;    // KB, block size
+    int bs       = 8 * 1024;    // KB, block size
     int fs       = 1 * 1024;    // MB, size of one output file
     int fc       = 50;          // number of generated files
     String out   = "_data";     // directory to generate output files
     String in    = "_data";     // directory to read input file
-    int    rd    = 4096;        // MB, for rw test - delay to start reading own file
 
     String rpt   = "./";        // base name for output folder
     int    iw    = 800;         // px, width of the output image
@@ -48,9 +47,6 @@ class Config {
 
         if( fc < 1 || fc > (10000) )
             SsdSlowMark.exit(1, "Invalid fc: " + fc);
-
-        if( rd < 1 || rd > (1024 * 1024) )
-            SsdSlowMark.exit(1, "Invalid rd: " + bs);
 
         switch( test ) {
             case "r":

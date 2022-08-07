@@ -41,6 +41,9 @@ public class TestCase extends Thread  {
     boolean doWaitFor() {
         if( waitFor != null ) {
             while( !waitFor.finished ) {
+                if( stop )
+                    return false;
+
                 try {
                     Thread.sleep(10);
                 }
@@ -49,7 +52,25 @@ public class TestCase extends Thread  {
                 }
             }
         }
-        return true;
+        return !stop;
     }
 
+    protected static void printPerf(String kind, File file, long fileStarted, long fileMB,
+                                    double perfMin, double perfMax) {
+        printPerf(kind, file, fileStarted, fileMB, perfMin, perfMax, -1, -1);
+    }
+
+    protected static void printPerf(String kind, File file, long fileStarted, long fileMB,
+                                    double perfMin, double perfMax, long nBlk, double pct) {
+        long fileNow = System.nanoTime();
+        float fileSec = (fileNow - fileStarted) / SsdSlowMark.NANO_SEC;
+        float filePerfMb = fileMB / fileSec / SsdSlowMark.MB;
+
+        SsdSlowMark.echo("              \r");
+        SsdSlowMark.echo("%s: %s = %6.1f MB/s, min = %6.1f MB/s, max = %6.1f MB/s",
+                         kind, file, filePerfMb, perfMin, perfMax);
+
+        if( pct > 0 )
+            SsdSlowMark.echo(" - #%s %.1f%%", nBlk, 100 * pct);
+    }
 }
